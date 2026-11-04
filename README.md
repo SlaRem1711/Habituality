@@ -27,7 +27,6 @@ One page, `index.html`, works in three places:
 | Where | Data is stored in | Who can sign in |
 |---|---|---|
 | Self-hosted with `server.py` | SQLite + a folder for uploads | Accounts created with a one-time setup code or an invite link |
-| As a Claude artifact | Claude's artifact storage | People the artifact is shared with |
 | Opened as a plain file | Nowhere | Nobody: it shows made-up example data |
 
 `server.py` is one Python file that only uses the standard library:
@@ -65,7 +64,7 @@ Admin commands: `habituality invite | users | passwd NAME | bans | unban IP | ba
   - Every change is checked on the server, so you can only edit your own entries.
   - Uploads are type-checked, and SVG files aren't accepted.
   - Every change needs a custom header, which blocks requests forged from other sites (CSRF).
-- **Known limit:** "write today, see all" is a rule in the page, not on the server.
+- **Known limit:** "write today, see all" is a rule in the page, not on the server. Basically you cant see other people's entries only after you write your own entry.
 
 ## Status
 
