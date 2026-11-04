@@ -1,0 +1,27 @@
+[Unit]
+Description=habituality journal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=habituality
+Group=habituality
+Environment=HB_DATA=/var/lib/habituality
+Environment=HB_HOST=127.0.0.1
+Environment=HB_PORT=8080
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/habituality/server.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+UMask=0027
+
+# Extra sandboxing. These need mount namespaces; in an unprivileged LXC that means
+# "Nesting" must be on (Proxmox: CT > Options > Features). Uncomment if it is.
+#ProtectSystem=strict
+#ProtectHome=yes
+#PrivateTmp=yes
+#ReadWritePaths=/var/lib/habituality
+
+[Install]
+WantedBy=multi-user.target

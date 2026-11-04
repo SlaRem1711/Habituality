@@ -1,0 +1,15 @@
+# The server's data never goes into git: entries, accounts, photos, songs, setup codes
+data/
+backups/
+files/
+*.db
+*.db-wal
+*.db-shm
+setup-code.txt
+
+# Leftovers
+__pycache__/
+*.pyc
+*.zip
+.DS_Store
+.env
