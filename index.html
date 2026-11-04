@@ -1,5 +1,4 @@
 <title>habituality</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap">
@@ -114,7 +113,6 @@ body.has-mini main.wrap{padding-bottom:calc(196px + env(safe-area-inset-bottom,0
 .entry{--pc:var(--p1);background:var(--paper);border:1px solid var(--line-2);border-radius:22px;padding:16px 16px 14px;box-shadow:var(--shadow);min-width:0}
 .e-h{display:flex;align-items:center;gap:10px;min-width:0}
 .av{--pc:var(--p1);width:38px;height:38px;border-radius:50%;background:var(--pc);color:var(--on-accent);display:grid;place-items:center;font:700 18px/1 var(--hand);flex:none;overflow:hidden}
-.av img{width:100%;height:100%;object-fit:cover}
 .av.sm{width:28px;height:28px;font-size:14px}
 .who{min-width:0;display:grid}
 .e-name{font:800 15px/1.2 var(--ui);overflow-wrap:anywhere}
@@ -585,10 +583,8 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
   }
   const firstName = (uid) => nameOf(uid).split(/\s+/)[0];
   function avatar(uid, small) {
-    const p = S.profiles[uid];
     const el = h('span', { class: 'av' + (small ? ' sm' : ''), style: `--pc:${colorOf(uid)}`, 'aria-hidden': 'true' });
-    if (S.host === 'claude' && p && p.avatarUrl && !/^data:/.test(p.avatarUrl)) el.append(h('img', { src: p.avatarUrl, alt: '' }));
-    else el.textContent = (nameOf(uid).trim().charAt(0) || '?').toUpperCase();
+    el.textContent = (nameOf(uid).trim().charAt(0) || '?').toUpperCase();
     return el;
   }
   const entry = (uid, date) => (S.days[uid] || {})[date] || null;
@@ -750,17 +746,10 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
   }
   function writeError(e) {
     const code = e && e.code;
-    if (code === 'invalid_argument' || code === 'not_granted' || code === 'revoked' || code === 'capability_disabled' || code === 'capability_removed' || code === 'forbidden') {
-      if (S.writable && S.host === 'claude') {
-        S.writable = false;
-        notice([h('b', { text: 'Read-only. ' }), 'This view cannot save. The owner can invite you from Share, by email, as an Editor.']);
-        schedule();
-      }
-      return 'Not saved: you can’t change that.';
-    }
+    if (code === 'forbidden' || code === 'invalid_argument') return 'Not saved: you can’t change that.';
     if (code === 'too_big' || code === 'too_large') return 'Not saved: too much in one entry. Remove a photo.';
-    if (code === 'quota_exceeded' || code === 'quota_or_state') return 'Not saved: storage is full.';
-    if (code === 'resource_exhausted' || code === 'rate_limited') return 'Not saved: too many saves at once. Try again.';
+    if (code === 'quota_or_state') return 'Not saved: storage is full.';
+    if (code === 'rate_limited') return 'Not saved: too many saves at once. Try again.';
     return 'Not saved: the journal could not be reached. Try again.';
   }
   async function writeConfig(patch) {
@@ -820,9 +809,7 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
     if (assets && S.mode === 'live') {
       const blob = await shrinkImage(file, 1800, 0.86);
       const type = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(blob.type) ? blob.type : 'image/jpeg';
-      let res;
-      try { res = await assets.upload(blob, { type }); }
-      catch (e) { if (e && e.code === 'store_unavailable') { await sleep(800); res = await assets.upload(blob, { type }); } else throw e; }
+      const res = await assets.upload(blob, { type });
       return { a: res.id };
     }
     return { d: await inlineImage(file) };
@@ -926,7 +913,7 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
     }
     if (!writers.length && !us.length && !(canWrite() && date <= T)) box.append(h('p', { class: 'empty', text: date > T ? 'This day hasn’t happened yet.' : 'Nobody wrote anything this day.' }));
     if (order().length < 2 && S.mode === 'live' && canWrite()) {
-      box.append(h('p', { class: 'empty', text: S.host === 'server' ? 'Invite friends from the round button at the top right. Their entries show up here like comments.' : 'Invite friends from Share, by email, as Editors. Their entries show up here like comments.' }));
+      box.append(h('p', { class: 'empty', text: 'Invite friends from the round button at the top right. Their entries show up here like comments.' }));
     }
     return box;
   }
@@ -1673,12 +1660,12 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
       h('span', { class: 'by', text: t.by ? (t.by === S.me ? 'you' : firstName(t.by)) : '' }),
       canWrite() && (t.by === S.me || owner) ? h('button', { class: 'del', type: 'button', 'data-k': 'rm-' + t.id, text: M.confirm === t.id ? 'Remove?' : 'Remove', style: M.confirm === t.id ? 'color:var(--slip)' : null, onclick: () => { if (M.confirm === t.id) removeTrack(t); else { M.confirm = t.id; renderRadio(); } } }) : null));
     let addPart;
-    if (S.mode === 'example') addPart = h('p', { class: 'rs-note', text: 'This is the example page. On your own page you can add songs here; until then, the calm tone plays.' });
-    else if (!canAddSongs()) addPart = h('p', { class: 'rs-note', text: S.host === 'claude' ? 'Adding songs needs edit access to this page. You can still play the shared list.' : 'You can play the shared list.' });
+    if (S.mode === 'example') addPart = h('p', { class: 'rs-note', text: 'This is the example page. On your server you can add songs here; until then, the calm tone plays.' });
+    else if (!canAddSongs()) addPart = h('p', { class: 'rs-note', text: 'You can play the shared list.' });
     else addPart = [
       h('div', { class: 'rs-row' },
         h('label', { class: 'btn' }, icon('plus'), 'Add songs', h('input', { type: 'file', multiple: true, 'data-k': 'add', accept: 'audio/*,.mp3,.m4a,.mp4,.webm,.ogg,.oga,.opus,.wav,.flac,.aac', 'aria-label': 'Add songs', onchange: (e) => { const fs = Array.from(e.target.files || []); e.target.value = ''; addSongs(fs); } }))),
-      h('p', { class: 'rs-note', text: S.host === 'server' ? 'MP3, M4A, OGG, WAV, FLAC. Up to 25 MB each. Everyone hears the same list.' : 'M4A, MP4 and WebM upload as they are; MP3, WAV, FLAC and OGG are converted in your browser first. Up to 20 MB each. Everyone hears the same list.' }),
+      h('p', { class: 'rs-note', text: 'MP3, M4A, OGG, WAV, FLAC. Up to 25 MB each. Everyone hears the same list.' }),
     ];
     const old = $('#rs .rs-panel');
     const scroll = old ? old.scrollTop : 0;
@@ -1712,21 +1699,16 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
       const job = { text: `${f.name}: preparing…` };
       M.busy.push(job); rr();
       try {
-        let prepared;
         const ext = (f.name.split('.').pop() || '').toLowerCase();
-        if (S.host === 'server') prepared = { blob: f, type: (f.type && /^audio\//.test(f.type) ? f.type : AUDIO_TYPES[ext]) || 'audio/mpeg' };
-        else prepared = await prepareAudio(f, (p) => { job.text = `${f.name}: converting ${Math.round(p * 100)}%`; rr(); });
+        const type = (f.type && /^audio\//.test(f.type) ? f.type : AUDIO_TYPES[ext]) || 'audio/mpeg';
+        if (f.size > 25 * 1024 * 1024) throw { code: 'too_large' };
         job.text = `${f.name}: uploading…`; rr();
-        let res;
-        try { res = await assets.upload(prepared.blob, { type: prepared.type }); }
-        catch (e) { if (e && e.code === 'store_unavailable') { await sleep(900); res = await assets.upload(prepared.blob, { type: prepared.type }); } else throw e; }
-        await put(`music/${rid()}`, { asset: res.id, name: cleanTrackName(f.name), by: S.me, at: isoNow(), type: prepared.type });
+        const res = await assets.upload(f, { type });
+        await put(`music/${rid()}`, { asset: res.id, name: cleanTrackName(f.name), by: S.me, at: isoNow(), type });
         job.text = `${f.name}: added`;
       } catch (e) {
         const code = e && e.code;
-        job.text = `${f.name}: ` + (code === 'no_encoder' ? 'this browser can’t convert it. Use Chrome or Firefox, or convert it to .m4a first.'
-          : code === 'decode' ? 'couldn’t read this audio file.'
-          : code === 'too_large' ? 'too big. Trim it or use a smaller file.'
+        job.text = `${f.name}: ` + (code === 'too_large' ? 'too big. Trim it or use a smaller file.'
           : code === 'unsupported_type' ? 'this format isn’t accepted.'
           : code === 'quota_or_state' ? 'storage is full.'
           : 'upload failed. Try again.');
@@ -1735,136 +1717,6 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
       setTimeout(() => { M.busy = M.busy.filter((b) => b !== job); rr(); }, 9000);
     }
   }
-  async function prepareAudio(file, onP) {
-    const ext = (file.name.split('.').pop() || '').toLowerCase();
-    const t = (file.type || '').toLowerCase();
-    if (['m4a', 'mp4', 'm4b'].includes(ext) || /^(audio|video)\/(mp4|x-m4a|m4a)$/.test(t)) return { blob: file, type: 'video/mp4' };
-    if (ext === 'webm' || /^(audio|video)\/webm$/.test(t)) return { blob: file, type: 'video/webm' };
-    if (file.size > 60 * 1024 * 1024) throw { code: 'too_large' };
-    return transcodeToWebm(file, onP);
-  }
-
-  // <transcoder> used only on the Claude-hosted page, whose storage accepts video containers but not plain audio:
-  // decode any audio the browser can read, encode Opus with WebCodecs and wrap it in a minimal WebM file.
-  const te8 = new TextEncoder();
-  function cat(parts) { let n = 0; for (const p of parts) n += p.length; const out = new Uint8Array(n); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; }
-  function idBytes(id) { const b = []; let v = id; while (v > 0) { b.unshift(v & 0xff); v = Math.floor(v / 256); } return new Uint8Array(b); }
-  function vsize(n) {
-    for (let len = 1; len <= 8; len++) {
-      if (n < Math.pow(2, 7 * len) - 1) {
-        const out = new Uint8Array(len); let v = n;
-        for (let i = len - 1; i >= 0; i--) { out[i] = v % 256; v = Math.floor(v / 256); }
-        out[0] |= (0x80 >> (len - 1));
-        return out;
-      }
-    }
-    throw new Error('element too large');
-  }
-  function uintB(v, width) {
-    let w = width || 1;
-    if (!width) while (w < 8 && v >= Math.pow(2, 8 * w)) w++;
-    const out = new Uint8Array(w); let x = v;
-    for (let i = w - 1; i >= 0; i--) { out[i] = x % 256; x = Math.floor(x / 256); }
-    return out;
-  }
-  function f64(v) { const b = new Uint8Array(8); new DataView(b.buffer).setFloat64(0, v); return b; }
-  function el(id, payload) { const p = Array.isArray(payload) ? cat(payload) : payload; return cat([idBytes(id), vsize(p.length), p]); }
-  function opusHead(channels, preskip) {
-    const b = new Uint8Array(19);
-    b.set(te8.encode('OpusHead'), 0); b[8] = 1; b[9] = channels;
-    b[10] = preskip & 0xff; b[11] = (preskip >> 8) & 0xff;
-    const sr = 48000; b[12] = sr & 0xff; b[13] = (sr >> 8) & 0xff; b[14] = (sr >> 16) & 0xff; b[15] = (sr >>> 24) & 0xff;
-    return b;
-  }
-  function muxWebmOpus(packets, head, channels, durationMs) {
-    const preskip = head[10] | (head[11] << 8);
-    const info = el(0x1549A966, [el(0x2AD7B1, uintB(1000000)), el(0x4D80, te8.encode('habituality')), el(0x5741, te8.encode('habituality')), el(0x4489, f64(durationMs))]);
-    const trks = el(0x1654AE6B, [el(0xAE, [
-      el(0xD7, uintB(1)), el(0x73C5, uintB(1)), el(0x83, uintB(2)), el(0x86, te8.encode('A_OPUS')), el(0x63A2, head),
-      el(0x56AA, uintB(Math.round(preskip / 48000 * 1e9))), el(0x56BB, uintB(80000000)),
-      el(0xE1, [el(0xB5, f64(48000)), el(0x9F, uintB(channels))]),
-    ])]);
-    const clusters = [], cueTimes = [];
-    let i = 0;
-    while (i < packets.length) {
-      const t0 = Math.round(packets[i].ts / 1000);
-      const blocks = [];
-      while (i < packets.length && Math.round(packets[i].ts / 1000) - t0 < 5000) {
-        const rel = Math.round(packets[i].ts / 1000) - t0;
-        blocks.push(el(0xA3, cat([new Uint8Array([0x81, (rel >> 8) & 0xff, rel & 0xff, 0x80]), packets[i].data])));
-        i++;
-      }
-      clusters.push(el(0x1F43B675, [el(0xE7, uintB(t0))].concat(blocks)));
-      cueTimes.push(t0);
-    }
-    const mkCues = (pos) => el(0x1C53BB6B, cueTimes.map((t, k) => el(0xBB, [el(0xB3, uintB(t, 4)), el(0xB7, [el(0xF7, uintB(1)), el(0xF1, uintB(pos[k], 8))])])));
-    const mkSeek = (a, b, c) => el(0x114D9B74, [
-      el(0x4DBB, [el(0x53AB, idBytes(0x1549A966)), el(0x53AC, uintB(a, 8))]),
-      el(0x4DBB, [el(0x53AB, idBytes(0x1654AE6B)), el(0x53AC, uintB(b, 8))]),
-      el(0x4DBB, [el(0x53AB, idBytes(0x1C53BB6B)), el(0x53AC, uintB(c, 8))]),
-    ]);
-    const seekLen = mkSeek(0, 0, 0).length;
-    const cuesLen = mkCues(cueTimes.map(() => 0)).length;
-    const pInfo = seekLen, pTracks = pInfo + info.length, pCues = pTracks + trks.length;
-    let pos = pCues + cuesLen;
-    const clusterPos = clusters.map((c) => { const p = pos; pos += c.length; return p; });
-    const segment = el(0x18538067, [mkSeek(pInfo, pTracks, pCues), info, trks, mkCues(clusterPos)].concat(clusters));
-    const ebml = el(0x1A45DFA3, [el(0x4286, uintB(1)), el(0x42F7, uintB(1)), el(0x42F2, uintB(4)), el(0x42F3, uintB(8)), el(0x4282, te8.encode('webm')), el(0x4287, uintB(4)), el(0x4285, uintB(2))]);
-    return cat([ebml, segment]);
-  }
-  function toU8(desc) {
-    if (desc instanceof ArrayBuffer) return new Uint8Array(desc.slice(0));
-    if (ArrayBuffer.isView(desc)) return new Uint8Array(desc.buffer.slice(desc.byteOffset, desc.byteOffset + desc.byteLength));
-    return null;
-  }
-  async function transcodeToWebm(file, onP) {
-    if (typeof AudioEncoder === 'undefined' || typeof AudioData === 'undefined') throw { code: 'no_encoder' };
-    const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    if (!Ctx) throw { code: 'no_encoder' };
-    const buf = await file.arrayBuffer();
-    const actx = new Ctx(2, 48000, 48000);
-    let audio;
-    try { audio = await new Promise((res, rej) => { const p = actx.decodeAudioData(buf, res, rej); if (p && p.then) p.then(res, rej); }); }
-    catch (e) { throw { code: 'decode' }; }
-    const ch = audio.numberOfChannels >= 2 ? 2 : 1;
-    const cfg = { codec: 'opus', sampleRate: 48000, numberOfChannels: ch, bitrate: ch === 2 ? 128000 : 96000 };
-    let sup;
-    try { sup = await AudioEncoder.isConfigSupported(cfg); } catch (e) { sup = { supported: false }; }
-    if (!sup || !sup.supported) throw { code: 'no_encoder' };
-    const packets = [];
-    let head = null, failure = null;
-    const enc = new AudioEncoder({
-      output: (chunk, meta) => {
-        const d = new Uint8Array(chunk.byteLength); chunk.copyTo(d);
-        packets.push({ ts: chunk.timestamp, data: d });
-        const desc = meta && meta.decoderConfig && meta.decoderConfig.description;
-        if (desc && !head) { const u = toU8(desc); if (u && u.length >= 19 && String.fromCharCode.apply(null, Array.from(u.slice(0, 8))) === 'OpusHead') head = u; }
-      },
-      error: (e) => { failure = e; },
-    });
-    enc.configure(cfg);
-    const total = audio.length, step = 48000;
-    const chans = [];
-    for (let c = 0; c < ch; c++) chans.push(audio.getChannelData(c));
-    for (let off = 0, k = 0; off < total; off += step, k++) {
-      if (failure) throw { code: 'no_encoder' };
-      const n = Math.min(step, total - off);
-      const data = new Float32Array(n * ch);
-      for (let c = 0; c < ch; c++) data.set(chans[c].subarray(off, off + n), c * n);
-      const ad = new AudioData({ format: 'f32-planar', sampleRate: 48000, numberOfFrames: n, numberOfChannels: ch, timestamp: Math.round(off * 1e6 / 48000), data });
-      enc.encode(ad); ad.close();
-      if (enc.encodeQueueSize > 4 || k % 8 === 0) { if (onP) onP(off / total); await sleep(0); }
-    }
-    await enc.flush(); enc.close();
-    if (failure) throw { code: 'no_encoder' };
-    packets.sort((a, b) => a.ts - b.ts);
-    const bytes = muxWebmOpus(packets, head || opusHead(ch, 312), ch, audio.duration * 1000);
-    if (onP) onP(1);
-    const blob = new Blob([bytes], { type: 'video/webm' });
-    if (blob.size > 20 * 1024 * 1024) throw { code: 'too_large' };
-    return { blob, type: 'video/webm' };
-  }
-  // </transcoder>
 
   // ================================================================== SOS
   let P = null;
@@ -2122,10 +1974,9 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
   document.addEventListener('focusout', (e) => { if (e.target && e.target.tagName === 'TEXTAREA') setTimeout(schedule, 0); });
   setInterval(() => { const nt = ymd(new Date()); if (nt !== T) { const was = T; T = nt; if (S.weekSel === was) S.weekSel = T; schedule(); } }, 60000);
 
-  // ================================================================== live mode (Claude-hosted or self-hosted)
-  function onStoreError(e) {
-    const code = e && e.code;
-    notice([h('b', { text: code === 'resource_exhausted' ? 'Busy. ' : 'Offline. ' }), 'Reload the page to reconnect. What you see may be out of date.']);
+  // ================================================================== live mode (data from server.py)
+  function onStoreError() {
+    notice([h('b', { text: 'Offline. ' }), 'Reload the page to reconnect. What you see may be out of date.']);
   }
   function ensureSubs(uid) {
     if (subs[uid] || !/^[A-Za-z0-9_.~:@+-]{1,200}$/.test(uid)) return;
@@ -2145,9 +1996,6 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
   async function ensureConfig() {
     const ref = db.doc('pact/config');
     try {
-      let ok = true;
-      if (typeof ref.acquire === 'function') { try { ok = !!(await ref.acquire({ holder: S.me, ttlMs: 5000 })).acquired; } catch (e) { ok = true; } }
-      if (!ok) return;
       const snap = await ref.get();
       if (!snap.exists || !Array.isArray((snap.data() || {}).habits)) { await ref.set({ habits: [SMOKING], tags: DEFAULT_TAGS, updatedAt: isoNow() }); S.configExists = true; }
     } catch (e) { /* someone else created it, or read-only */ }
@@ -2156,8 +2004,6 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
     S.mode = 'live';
     try { S.me = user ? await user.id() : null; } catch (e) { S.me = null; }
     if (!S.me) S.writable = false;
-    if (user && S.writable && S.host === 'claude') { try { if ((await user.can('data.write')) === false) S.writable = false; } catch (e) { /* unknown: a write decides */ } }
-    if (!S.writable) notice([h('b', { text: 'Read-only. ' }), 'You can read along. To write your own days, ask the owner to invite you from Share, by email, as an Editor.']);
     schedule();
     const timer = setTimeout(() => { if (!S.loaded) notice([h('b', { text: 'Offline. ' }), 'The journal can’t be reached yet. It loads on its own once the connection is back.']); }, 10000);
     if (S.me) ensureSubs(S.me);
@@ -2256,10 +2102,9 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
     }
     const userApi = {
       id: async () => me.id,
-      can: async () => true,
       profiles: async (ids) => {
         const out = {};
-        for (const id of [].concat(ids)) out[id] = { id, name: (users[id] && users[id].name) || '', avatarUrl: '', color: '', email: null, isMe: id === me.id, guest: false };
+        for (const id of [].concat(ids)) out[id] = { id, name: (users[id] && users[id].name) || '' };
         return out;
       },
     };
@@ -2359,7 +2204,7 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
     paint();
   }
 
-  // ================================================================== example mode (opened outside Claude and without a server)
+  // ================================================================== example mode (opened as a plain file, without the server)
   function samplePhoto(kind) {
     try {
       const c = document.createElement('canvas'); c.width = 640; c.height = 640;
@@ -2468,7 +2313,7 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
       }
     }
     S.days = days; S.reactions = reactions; S.replies = replies; S.urges = urges;
-    notice([h('b', { text: 'Example. ' }), 'Three made-up people and a month of their entries. Open the published page in Claude, or run it on your server, to start your real journal; nothing here is saved.']);
+    notice([h('b', { text: 'Example. ' }), 'Three made-up people and a month of their entries. Nothing here is saved. Run it with server.py to start your real journal.']);
     schedule();
   }
 
@@ -2480,16 +2325,6 @@ body.has-mini .toast{bottom:calc(160px + env(safe-area-inset-bottom,0px))}
     renderNav();
     renderTab();
     paintMusic();
-    const c = window.claude;
-    if (c && typeof c.use === 'function') {
-      S.host = 'claude';
-      let d = null, u = null, a = null;
-      try { [d, u, a] = await Promise.all([c.use('db'), c.use('user'), c.use('assets')]); } catch (e) { d = null; }
-      if (!d) { startExample(); return; }
-      db = d; user = u; assets = a;
-      startLive();
-      return;
-    }
     if (/^https?:$/.test(location.protocol)) {
       try {
         const r = await fetch('api/me', { credentials: 'same-origin', headers: { 'X-HB': '1' } });
