@@ -22,7 +22,7 @@ Write your day, turn a dial, see how everyone else is doing, Also you can press 
 
 ## How it runs
 
-One page, `index.html`, works in three places:
+One page, `index.html`:
 
 | Where | Data is stored in | Who can sign in |
 |---|---|---|
