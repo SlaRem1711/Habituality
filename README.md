@@ -1,7 +1,7 @@
 # habituality.
 
-A small, cozy journal for a group of friends who are quitting habits together.
-Write your day, turn a dial, see how everyone else is doing, and press **SOS** when it gets hard.
+A small, journal for my group of friends who want to quit different habits together.
+Write your day, turn a dial, see how everyone else is doing, Also you can press **SOS** when it gets hard (it doesnt save you but at least you get music and some breathing exercises)
 
 ![Week view, the daily dial, the month view in dark mode, and the SOS screen](docs/screenshots/overview.png)
 
